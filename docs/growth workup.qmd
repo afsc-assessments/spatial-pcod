@@ -2,7 +2,9 @@
 title: "Spatial Growth Workup"
 author: "Maia Kapur"
 format: html
-editor: visual
+editor: source
+toc: true
+toc-depth: 2
 ---
 
 ## Overview
