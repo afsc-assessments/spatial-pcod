@@ -1,0 +1,131 @@
+---
+title: "Spatial Growth Workup"
+author: "Maia Kapur"
+format: html
+editor: source
+toc: true
+toc-depth: 2
+---
+
+```{r setup, echo = FALSE, message = FALSE, warning = FALSE}
+library(growthbreaks)
+library(dplyr)
+library(ggplot2)
+codspec <- read.csv(here::here('data','survey_specimen_data_pcod.csv'))
+names(codspec) <- tolower(names(codspec))
+# names(codspec)[12] <- 'length_cm'
+## split by sex
+codspec <- codspec %>% 
+  filter(sex != 3) %>%
+  dplyr::select(sex, year, age, length, lat = end_latitude , long = end_longitude, weight) %>%
+  group_split(sex) 
+theme_set(ggsidekick::theme_sleek())
+```
+
+# Overview
+
+This analysis leverages the [growthbreaks](https://github.com/afsc-assessments/growthbreaks) R package to investigate potential spatio-temporal breaks, or clusters, in Pacific cod growth across the range. There are some major caveats in analyzing these data wholesale, largely due to sampling changes through time -- so this investigation is intended to guide discussions and inference, *not* to be the final word on spatial demographic structure. This uses `SPECIMEN` data from all three regions. 
+
+ 
+
+# Raw Observations
+Males = 1, Females = 2
+It looks like ages 3-9 are good candidates for break detection.
+```{r echo = FALSE, include = TRUE, message = FALSE, warning = FALSE}
+dat_use <- data.frame(codspec[[1]])
+pm <- check_data(dat_use, showPlot = FALSE)
+
+ggplot(bind_rows(codspec[[1]],codspec[[2]]),aes(x = age, y =length) ) +
+  geom_point(alpha = 0.1) +
+  facet_grid(~sex)
+
+ 
+```
+ 
+
+```{r female breaks, warning = FALSE, message=FALSE, echo = FALSE, include = FALSE}
+breakpointsF <- get_Breaks(dat = data.frame(codspec[[2]]),
+                          ages_to_use = c(3,5,7,9),
+                          sex = FALSE, 
+                          axes = 0, 
+                          showPlot = FALSE)
+## the longitude break is meaningless, delete a priori
+breakpointsF$breakpoints$long <- -Inf
+breakpointsF$breakpoints <- breakpointsF$breakpoints[2:3,]
+breakpointsF$breakpoints$lat[1] <- 53
+
+fits1f <- refit_Growth( data.frame(codspec[[2]]), breakpointsF$breakpoints, showPlot = FALSE)
+
+plot_Breaks(dat =  data.frame(codspec[[2]]),
+            breakpoints = breakpointsF$breakpoints,
+            TRUE)
+
+```
+
+```{r male breaks, warning = FALSE, message=FALSE, echo = FALSE, include = FALSE}
+breakpointsM <- get_Breaks(dat = data.frame(codspec[[1]]),
+                          ages_to_use = c(3,5,7,9),
+                          sex = FALSE, 
+                          axes = 0, 
+                          showPlot = TRUE)
+
+## the longitude break is meaningless, delete a priori
+breakpointsM$breakpoints$long<- -Inf
+fits1m <- refit_Growth( data.frame(codspec[[1]]), breakpointsM$breakpoints, showPlot = FALSE)
+
+fits1m$fits_plot
+fits1m$pars_plot
+
+
+plot_Breaks(dat =  data.frame(codspec[[1]]),
+            breakpoints = breakpointsM$breakpoints,
+            TRUE)
+```
+
+
+::: panel-tabset
+
+## Male Detected Breaks
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+plot_Breaks(dat =  data.frame(codspec[[1]]),
+            breakpoints = breakpointsM$breakpoints,
+            TRUE)
+```
+
+## Male fitted curves
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+fits1m$fits_plot
+
+```
+
+## Male parameters
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+fits1m$pars_plot
+```
+
+
+
+## Female Detected Breaks
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+plot_Breaks(dat =  data.frame(codspec[[2]]),
+            breakpoints = breakpointsF$breakpoints,
+            TRUE)
+```
+
+## Female fitted curves
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+fits1f$fits_plot
+
+```
+
+## Female parameters
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+fits1f$pars_plot
+```
+
+
+
+
+:::
